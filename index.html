@@ -1,0 +1,2715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>App Reviews World - App Comment Generator</title>
+    <meta name="description" content="Generate unique, high-quality reviews comments for your favorite apps. Manage and add comments in bulk with our powerful admin panel.">
+    <meta name="keywords" content="reviews generator, comment generator, app reviews, user feedback, marketing tool">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        /* 🔥 Bottom Main Box (Form Card) Color Change */
+.app-card {
+  background: linear-gradient(135deg, #97a0d3, #4a94dd);
+  border: 1px solid #1E3A8A;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+}
+        #generateBtn {
+  background-color: #171e35;   /* Yahan apna color daal sakte ho */
+}
+       
+        :root {
+            /* Light Mode (Default variables, but will be overridden by .dark) */
+            --color-bg: #f3f4f6;
+            --color-surface: #ffffff;
+            --color-border: #e5e7eb;
+            --color-text: #1f2937;
+            --color-text-secondary: #6b7280;
+            --color-primary: #3b82f6;
+            --color-primary-hover: #2563eb;
+            --color-secondary: #4f46e5;
+            --color-danger: #ef4444;
+            --color-success: #16a34a;
+            --color-warning: #f59e0b;
+        }
+
+        .dark {
+            /* Dark Mode */
+            --color-bg: #111827;
+            --color-surface: #1f2937;
+            --color-border: #374151;
+            --color-text: #f3f4f6;
+            --color-text-secondary: #9ca3af;
+        }
+
+        html {
+            /* Smooth scrolling */
+            scroll-behavior: smooth;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--color-bg); 
+            color: var(--color-text); 
+            -webkit-font-smoothing: antialiased; 
+            transition: background-color 0.3s ease, color 0.3s ease;
+             /* Prevent scrolling when full-screen chat is open */
+            overflow: auto; 
+        }
+        body.no-scroll {
+             overflow: hidden;
+        }
+
+        #app-container { 
+            display: none; /* Start hidden */
+            opacity: 0; 
+            transition: opacity 0.5s ease-in-out; 
+            min-height: 100vh; /* Ensure footer is pushed down */
+            display: flex; /* Changed back to flex */
+            flex-direction: column;
+        }
+        #app-container > main {
+            flex-grow: 1; /* Make main content area grow */
+            overflow: hidden;
+        }
+        
+        .app-card { 
+            background-color: var(--color-surface); 
+            border: 1px solid var(--color-border);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .btn { 
+            transition: all 0.2s ease-in-out; 
+            cursor: pointer;
+        }
+        .btn:hover:not(:disabled) { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+        }
+        .btn:disabled { 
+            opacity: 0.6; 
+            cursor: not-allowed; 
+        }
+        .btn-primary { 
+            background-color: var(--color-primary); 
+            color: #ffffff;
+        }
+        .btn-primary:hover:not(:disabled) { 
+            background-color: var(--color-primary-hover); 
+        }
+        .form-control { 
+            background-color: var(--color-bg); 
+            border: 1px solid var(--color-border); 
+            color: var(--color-text); 
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        }
+        .form-control:focus { 
+            outline: none; 
+            border-color: var(--color-primary); 
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); 
+        }
+        /* Placeholder color for both themes */
+        .form-control::placeholder {
+            color: var(--color-text-secondary);
+            opacity: 0.7;
+        }
+
+        /* .btn-spinner { 
+            border-color: rgba(255, 255, 255, 0.2); 
+            border-left-color: #ffffff; 
+            animation: spin 1s linear infinite; 
+        } */
+        /* New Loader Animation */
+        .btn-spinner {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 4px solid rgba(255,255,255,0.15);
+  border-top-color: #4DA3FF;
+  animation: spin 1.6s linear infinite;
+  box-shadow: 0 0 12px rgba(77,163,255,0.6);
+}
+        @keyframes spin { 
+            to { transform: rotate(360deg); } 
+        }
+       /* ✅ Loader Background Animation */
+#initializer-message {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+
+  background: linear-gradient(
+    120deg,
+    #0A0F1E,
+    #0F172A,
+    #1E293B,
+    #0A0F1E
+  );
+  background-size: 400% 400%;
+
+  animation: bgMove 5s linear infinite;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+@keyframes bgMove {
+  0%   { background-position:   0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position:   0% 50%; }
+}
+        /* Welcome Text Animation */
+.welcome-anim {
+  animation: fadeUp 1.2s ease-out;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+        #toast-container { 
+            position: fixed; 
+            top: 1.5rem; 
+            right: 1.5rem; 
+            z-index: 1050; /* Above chat */
+            display: flex; 
+            flex-direction: column; 
+            gap: 0.75rem; 
+        }
+        .toast { 
+            display: flex; 
+            align-items: center; 
+            padding: 1rem; 
+            border-radius: 0.75rem; 
+            background-color: var(--color-surface); 
+            border: 1px solid var(--color-border); 
+            color: var(--color-text);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
+            transform: translateX(100%); 
+            opacity: 0; 
+            transition: all 0.3s cubic-bezier(0.21, 1.02, 0.73, 1);
+            min-width: 250px;
+        }
+        .toast.show { 
+            transform: translateX(0); 
+            opacity: 1; 
+        }
+        .toast.success { 
+            border-left: 4px solid var(--color-success); 
+        }
+        .toast.error { 
+            border-left: 4px solid var(--color-danger); 
+        }
+        /* BUG FIX 9: Style for toast close button */
+        .toast-close-btn {
+            background: none;
+            border: none;
+            color: var(--color-text-secondary);
+            font-size: 1.5rem;
+            line-height: 1;
+            cursor: pointer;
+            margin-left: 1rem;
+            padding: 0 0.5rem;
+        }
+        .toast-close-btn:hover {
+            color: var(--color-text);
+        }
+
+        .otp-input {
+            width: 2.5rem; 
+            height: 3rem; 
+            text-align: center; 
+            font-size: 1.25rem;
+            background-color: var(--color-border); 
+            border: 1px solid #4b5563; 
+            border-radius: 0.5rem;
+            color: var(--color-text); 
+            caret-color: var(--color-primary);
+        }
+        @media (min-width: 640px) {
+            .otp-input { 
+                width: 3rem; 
+                height: 3.5rem; 
+                font-size: 1.5rem; 
+            }
+        }
+        .otp-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        .icon-btn { 
+            transition: color 0.2s; 
+            cursor: pointer;
+        }
+        .icon-btn:hover { 
+            color: var(--color-text-secondary); 
+        }
+        
+        /* BUG FIX 10: Changed slide-up to fade effect */
+        #slide-up-overlay {
+            background-color: rgba(0,0,0,0.75);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0s linear 0.3s;
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+        }
+        #slide-up-overlay.show {
+            opacity: 1;
+            visibility: visible;
+            transition-delay: 0s;
+        }
+        #slide-up-panel {
+            background-color: var(--color-surface);
+            border-top: 1px solid var(--color-border);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0s linear 0.3s, background-color 0.3s ease, border-color 0.3s ease;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            flex-direction: column;
+            max-height: 80vh;
+            display: flex;
+        }
+        #slide-up-panel.show {
+            opacity: 1;
+            visibility: visible;
+            transition-delay: 0s;
+        }
+        #slide-up-content {
+            color: var(--color-text-secondary);
+        }
+        .dark #slide-up-content {
+             color: #9ca3af;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 1040; /* Below toasts */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .modal-content {
+            background-color: var(--color-surface);
+            border-radius: 0.75rem;
+            width: 100%;
+            max-width: 24rem;
+            padding: 1.5rem;
+            border: 1px solid var(--color-border);
+            color: var(--color-text);
+        }
+
+        .comment-item {
+            transition: all 0.3s ease;
+        }
+
+        .comment-item.fade-out {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        /* Notification styles */
+        .notification-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background-color: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notification-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--color-bg);
+            z-index: 1030; /* Below modals */
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out, background-color 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .notification-panel.show {
+            transform: translateX(0);
+        }
+
+        .notification-item {
+            border-bottom: 1px solid var(--color-border);
+            padding: 1rem;
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-item.unread {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        
+        /* BUG FIX 7: Ensure notification text colors work in light/dark mode */
+        .notification-item-title { color: var(--color-text); }
+        .notification-item-message { color: var(--color-text-secondary); }
+        .notification-item-date { color: var(--color-text-secondary); }
+        .notification-panel-header {
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            color: var(--color-text);
+        }
+        .notification-panel-header-secondary {
+            color: var(--color-text-secondary);
+        }
+        .notification-panel-header-icon {
+             color: var(--color-text-secondary);
+        }
+        .notification-panel-header-icon:hover {
+             color: var(--color-text);
+        }
+
+
+        
+        /* NEW: Improved Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #3b82f6;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        input:focus + .toggle-slider {
+            box-shadow: 0 0 1px #3b82f6;
+        }
+
+        /* Simple Admin Panel */
+        .admin-menu-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--color-border);
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .admin-menu-item:hover {
+            background-color: rgba(128,128,128, 0.1);
+        }
+
+        .admin-menu-item i {
+            margin-right: 0.75rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Remove old Action Bar */
+        .action-bar {
+           display: none;
+        }
+
+        /* New Side Menu */
+        #sideMenuOverlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
+        }
+        #sideMenuOverlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #sideMenu {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            max-width: 300px;
+            background-color: var(--color-surface);
+            border-left: 1px solid var(--color-border);
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out, background-color 0.3s ease, border-color 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        #sideMenu.show {
+            transform: translateX(0);
+        }
+
+        .side-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+        
+        .side-menu-button {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 1rem;
+            gap: 0.75rem;
+            font-weight:500;
+            color: var(--color-text);
+            transition: background-color 0.2s ease;
+            position: relative; /* For notification badge */
+        }
+        .side-menu-button:hover {
+            background-color: rgba(128,128,128, 0.1);
+        }
+        .side-menu-button i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.125rem;
+            color: var(--color-text-secondary);
+        }
+
+        /* Specific badge position for menu button */
+        .side-menu-button .badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        
+
+        /* NEW: Admin Full Page Styles */
+        .admin-full-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--color-bg);
+            z-index: 1020;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+            overflow-y: auto;
+        }
+        .admin-full-page.show {
+            transform: translateX(0);
+        }
+        .admin-header {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--color-border);
+            background-color: var(--color-surface);
+        }
+        .admin-back-btn {
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            padding: 0.5rem;
+            margin-right: 1rem;
+        }
+        .admin-back-btn:hover {
+            color: var(--color-text);
+        }
+        .admin-content {
+            padding: 1.5rem;
+        }
+
+        /* NEW: App Lock System Styles */
+        .app-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-locked-badge {
+            background-color: var(--color-danger);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            margin-left: 0.5rem;
+        }
+
+        .app-coming-soon {
+            opacity: 0.6;
+            color: var(--color-text-secondary);
+        }
+
+        .locked-app {
+            opacity: 0.6;
+            position: relative;
+        }
+
+        .locked-app::after {
+            content: "🔒";
+            position: absolute;
+            right: 10px;
+            color: var(--color-danger);
+        }
+
+        /* Admin panel fixes for mobile view */
+        @media (max-width: 768px) {
+            body {
+                padding: 0.5rem;
+            }
+            #userView {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+            }
+            
+            #commentsContainer {
+                flex: 1;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Fix for admin panel mobile view - remove extra spacing */
+            .admin-content {
+                padding: 1rem;
+            }
+            
+            .admin-content > div {
+                margin-bottom: 1.5rem;
+            }
+            
+            /* Ensure admin panels are scrollable */
+            .admin-full-page {
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        /* Security PIN management styles */
+        .pin-input-container {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+
+        .pin-input {
+            width: 2.5rem;
+            height: 2.5rem;
+            text-align: center;
+            font-size: 1.25rem;
+            border: 1px solid var(--color-border);
+            border-radius: 0.5rem;
+            background-color: var(--color-surface);
+            color: var(--color-text);
+        }
+
+        /* Mobile layout fix */
+        @media (max-width: 768px) {
+            body {
+                padding: 0.5rem;
+            }
+            #userView {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+            }
+            
+            #commentsContainer {
+                flex: 1;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+    </style>
+</head>
+<body class="p-2 sm:p-4">
+
+    
+
+    <div id="notificationPanel" class="notification-panel">
+        <div class="p-4 sticky top-0 notification-panel-header">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <button id="closeNotificationPanel" class="notification-panel-header-icon">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-xl font-bold">🔔 Notifications & Alerts</h2>
+                </div>
+                <span class="text-sm notification-panel-header-secondary" id="notificationCount">0 notifications</span>
+            </div>
+        </div>
+        <div id="notificationList" class="p-4">
+            </div>
+    </div>
+
+    <div id="sideMenuOverlay"></div>
+    <div id="sideMenu">
+        <div class="side-menu-header">
+            <h2 class="text-xl font-bold">Menu</h2>
+            <button id="closeMenuBtn" class="text-gray-400 hover:text-white" aria-label="Close menu">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+        <nav class="flex-1">
+            <button id="menuNotificationBtn" class="side-menu-button">
+                <!-- <i class="fas fa-bell"></i> -->
+                <span>🔔 Notifications & Alerts</span>
+                <div id="notificationBadge" class="badge hidden">0</div>
+            
+            <button id="bulkGeneratorBtn" class="side-menu-button">
+                <!-- <i class="fas fa-copy"></i> -->
+                <span>✨Bulk Comments Tool</span>
+            </button>
+            <button id="adminAccessBtn" class="side-menu-button">
+                 <!-- <i class="fas fa-user-shield"></i> -->
+                 <span>✨Admin Area</span>
+            </button>
+             <button id="logoutBtn" class="side-menu-button hidden">
+                 <i class="fas fa-sign-out-alt"></i>
+                 <span>✨Logout</span>
+            </button>
+            <button id="themeToggleBtn" class="side-menu-button">
+                 <!-- <i id="themeIcon" class="fas fa-moon"></i> -->
+                 <span id="themeText">🌙 Auto Theme</span>
+            </button>
+        </nav>
+    </div>
+    <div id="initializer-message" class="fixed inset-0 flex items-center justify-center  z-50">
+  <div class="text-center">
+    <div class="btn-spinner inline-block mb-5"></div>
+
+   
+    <div class="welcome-anim" style="color:#E6F1FF; font-size:22px; font-weight:700;">
+  👋 Welcome to App Reviews World
+</div>
+
+    
+    <div class="welcome-anim" style="color:#4DA3FF; font-size:15px; margin-top:6px;">
+  ✨ Honest App Reviews & Insights
+</div>
+  </div>
+</div>
+
+   
+
+    <div id="app-container" class="w-full max-w-5xl mx-auto ">
+       
+        <header class="app-card rounded-xl p-4 mb-6 bg-[#1E3A8A] text-white ">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img src="logo.png" alt="App Reviews World Logo" class="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-600 object-cover">
+                    <h1 class="text-xl sm:text-2xl md:text-3xl font-bold">APP REVIEWS WORLD</h1>
+                </div>
+                <button id="menuBtn" class="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-700" aria-label="Open menu">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <div id="userView" class="space-y-6 h-full overflow-hidden">
+                 <div class="app-card rounded-xl p-6 ">
+                    <p class="text-[#1e3a8a] mb-4">Select an app and the number of review comments you need.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="appSelector" class="block mb-2 text-[#1e3a8a] font-semibold">App Name</label>
+                            <select id="appSelector" class="form-control w-full p-2.5 rounded-lg" aria-required="true">
+                                <option value="">Loading apps...</option>
+                            </select>
+                        </div>
+                       <div>
+                            <label class="block mb-2 text-[#1e3a8a] font-semibold">Number of Comments</label>
+                            <div class="form-control w-full p-2.5 rounded-lg bg-gray-700 text-gray-300">
+                                1 (One comment for one user)
+                            </div>
+                        </div>
+                        <div class="flex items-end">
+                            <button id="generateBtn" class="btn btn-primary w-full text-white font-bold py-2.5 px-5 rounded-lg shadow-md">
+                                Generate
+                            </button>
+                        </div>
+                    </div>
+                    <div id="userCommentCountInfo" class="text-right text-sm text-gray-400 h-5 pt-1" aria-live="polite"></div>
+                </div>
+                <div id="copyAllContainer" class="my-4"></div>
+                <div id="commentsContainer" class="space-y-4 flex-1 overflow-y-auto" aria-live="polite"></div>
+            </div>
+
+            <div id="adminView" class="hidden space-y-8">
+               <div class="app-card rounded-xl">
+                    <div class="admin-menu-item" onclick="app.showAdminFullPage('appManagement')">
+                        <i class="fas fa-mobile-alt text-blue-400"></i>
+                        <span>App Management</span>
+                    </div>
+                    <div class="admin-menu-item" onclick="app.showAdminFullPage('commentManagement')">
+                        <i class="fas fa-comments text-green-400"></i>
+                        <span>Comment Management</span>
+                    </div>
+                    <div class="admin-menu-item" onclick="app.showAdminFullPage('notificationManagement')">
+                        <i class="fas fa-bell text-yellow-400"></i>
+                        <span>Notification Management</span>
+                    </div>
+                    
+                    <div class="admin-menu-item" onclick="app.showAdminFullPage('systemSettings')">
+                        <i class="fas fa-cog text-purple-400"></i>
+                        <span>System Settings</span>
+                    </div>
+                    <!-- NEW: Security PIN Management Menu Item -->
+                    <div class="admin-menu-item" onclick="app.showAdminFullPage('securityPINManagement')">
+                        <i class="fas fa-key text-red-400"></i>
+                        <span>Security PIN Management</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="text-center py-8 text-gray-500 text-sm mt-auto"> <p>APP REVIEWS WORLD 2026</p>
+            <div class="flex justify-center flex-wrap gap-x-2 sm:gap-x-4 gap-y-2 mt-2">
+                <a href="index.html#" id="channelsLink" class="text-blue-400 hover:text-primary underline">Our channel</a>
+                <span class="text-gray-600">|</span>
+                <a href="index.html#" id="contactLink" class="text-blue-400 hover:text-primary underline">Contact Us</a>
+                <span class="text-gray-600">|</span>
+                <a href="index.html#" id="howItWorksLink" class="text-blue-400 hover:text-primary underline">How it Works</a>
+                <span class="text-gray-600">|</span>
+                <!-- <a href="index.html#" id="whatsNewLink" class="text-blue-400 hover:text-primary underline">What's New</a>
+                <span class="text-gray-600">|</span> -->
+                <a href="index.html#" id="termsLink" class="text-blue-400 hover:text-primary underline">Terms & Conditions</a>
+                <span class="text-gray-600">|</span>
+                <a href="index.html#" id="privacyLink" class="text-blue-400 hover:text-primary underline">Privacy Policy</a>
+            </div>
+        </footer>
+    </div>
+    
+    <div id="modalContainer"></div>
+    
+    <div id="toast-container"></div>
+    
+    <div id="slide-up-overlay" class="fixed inset-0 z-40"></div>
+    <div id="slide-up-panel" class="fixed bottom-0 left-0 right-0 z-50 flex flex-col max-h-[80vh]">
+        <div class="flex-shrink-0 p-4 border-b border-border flex justify-between items-center">
+            <h2 id="slide-up-title" class="text-xl font-bold"></h2>
+            <button id="slide-up-close" class="text-gray-400 hover:text-white" aria-label="Close panel">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="slide-up-content" class="text-sm p-6 overflow-y-auto"></div>
+    </div>
+
+    <div id="chatWindow" class="hidden"> <div class="chat-header">
+             <button id="chatBackBtn" aria-label="Close chat">
+                 <i class="fas fa-arrow-left text-xl"></i>
+            </button>
+            <h3>App Reviews World AI</h3>
+            <div class="w-8"></div> 
+        </div>
+        <div id="chatMessages">
+            </div>
+        <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="Ask a question..." class="form-control">
+            <button id="chatSendBtn" class="btn btn-primary" aria-label="Send message">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Admin Pages -->
+    <div id="adminAppManagementPage" class="admin-full-page">
+        <div class="admin-header">
+            <button class="admin-back-btn" onclick="app.hideAdminFullPage()">
+                <i class="fas fa-arrow-left text-xl"></i>
+            </button>
+            <h2 class="text-xl font-bold">App Management</h2>
+        </div>
+        <div class="admin-content">
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Add New App</h3>
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            id="newAppName" 
+                            class="form-control w-full p-2.5 rounded-lg" 
+                            placeholder="Enter new app name"
+                            aria-required="true"
+                        >
+                        <button id="addAppBtn" class="btn btn-primary text-white font-bold py-2.5 px-5 rounded-lg">
+                            Add
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Existing Apps</h3>
+                    <div id="appListContainer" class="space-y-2 max-h-60 overflow-y-auto" aria-live="polite">
+                        <p class="text-gray-500 text-sm p-2 text-center">Loading apps...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminCommentManagementPage" class="admin-full-page">
+        <div class="admin-header">
+            <button class="admin-back-btn" onclick="app.hideAdminFullPage()">
+                <i class="fas fa-arrow-left text-xl"></i>
+            </button>
+            <h2 class="text-xl font-bold">Comment Management</h2>
+        </div>
+        <div class="admin-content">
+            <div class="mb-4">
+                <label for="adminAppSelector" class="block mb-2 text-sm font-medium">Select App</label>
+                <select id="adminAppSelector" class="form-control w-full p-2.5 rounded-lg">
+                    <option value="">Loading apps...</option>
+                </select>
+                <div id="adminCommentCountInfo" class="text-right text-sm text-gray-400 h-5 pt-1" aria-live="polite"></div>
+            </div>
+            <div id="adminActionContainer" class="hidden space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold">Add Bulk Comments</h3>
+                    <textarea 
+                        id="bulkComments" 
+                        rows="6" 
+                        class="form-control block p-2.5 w-full text-sm rounded-lg mt-2" 
+                        placeholder="One comment per line."
+                        aria-required="true"
+                    ></textarea>
+                    <button id="submitCommentsBtn" class="btn btn-primary w-full md:w-auto text-white font-bold py-2.5 px-5 rounded-lg shadow-md mt-2">
+                        Add Comments
+                    </button>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold">Manage Existing Comments</h3>
+                    <div id="manageCommentsContainer" class="mt-2 border border-gray-600 rounded-lg max-h-60 overflow-y-auto p-2" aria-live="polite">
+                        <p class="text-gray-500 p-4 text-center">No comments to manage.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminNotificationManagementPage" class="admin-full-page">
+        <div class="admin-header">
+            <button class="admin-back-btn" onclick="app.hideAdminFullPage()">
+                <i class="fas fa-arrow-left text-xl"></i>
+            </button>
+            <h2 class="text-xl font-bold">Notification Management</h2>
+        </div>
+        <div class="admin-content">
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">Create New Notification</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="notificationTitle" class="block mb-2 text-sm font-medium">Title</label>
+                            <input 
+                                type="text" 
+                                id="notificationTitle" 
+                                class="form-control w-full p-2.5 rounded-lg" 
+                                placeholder="Enter notification title"
+                                aria-required="true"
+                            >
+                        </div>
+                        <div>
+                            <label for="notificationMessage" class="block mb-2 text-sm font-medium">Message</label>
+                            <textarea 
+                                id="notificationMessage" 
+                                rows="4" 
+                                class="form-control block p-2.5 w-full text-sm rounded-lg" 
+                                placeholder="Enter notification message"
+                                aria-required="true"
+                            ></textarea>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <label for="notificationUrgent" class="text-sm font-medium">Mark as Urgent</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="notificationUrgent">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <button id="sendNotificationBtn" class="btn btn-primary w-full md:w-auto text-white font-bold py-2.5 px-5 rounded-lg shadow-md">
+                            Send Notification
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">Recent Notifications</h3>
+                    <div id="recentNotificationsContainer" class="space-y-3" aria-live="polite">
+                        <p class="text-gray-500 p-4 text-center">No recent notifications.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <div id="adminSystemSettingsPage" class="admin-full-page">
+        <div class="admin-header">
+            <button class="admin-back-btn" onclick="app.hideAdminFullPage()">
+                <i class="fas fa-arrow-left text-xl"></i>
+            </button>
+            <h2 class="text-xl font-bold">System Settings</h2>
+        </div>
+        <div class="admin-content">
+            <div class="space-y-6">
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">Security Settings</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-4 border border-gray-600 rounded-lg">
+                            <div>
+                                <p class="font-medium">Require Admin Login</p>
+                                <p class="text-sm text-gray-400">Force admin login for admin panel access</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="requireAdminLoginToggle">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between p-4 border border-gray-600 rounded-lg">
+                            <div>
+                                <p class="font-medium">Enable Notifications</p>
+                                <p class="text-sm text-gray-400">Allow users to receive notifications</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="enableNotificationsToggle">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NEW: Security PIN Management Page -->
+    <div id="adminSecurityPINManagementPage" class="admin-full-page">
+        <div class="admin-header">
+            <button class="admin-back-btn" onclick="app.hideAdminFullPage()">
+                <i class="fas fa-arrow-left text-xl"></i>
+            </button>
+            <h2 class="text-xl font-bold">Security PIN Management</h2>
+        </div>
+        <div class="admin-content">
+            <div class="space-y-6">
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold mb-3">Change Admin PIN</h3>
+                    <p class="text-sm text-gray-400 mb-3">Current PIN: <span id="currentAdminPIN" class="font-mono">••••••</span></p>
+                    <div class="space-y-3">
+                        <div>
+                            <label for="newAdminPIN" class="block mb-1 text-sm font-medium">New 6-digit Admin PIN</label>
+                            <input 
+                                type="text" 
+                                id="newAdminPIN" 
+                                class="form-control w-full p-2.5 rounded-lg" 
+                                placeholder="Enter new 6-digit PIN"
+                                maxlength="6"
+                                inputmode="numeric"
+                            >
+                        </div>
+                        <div>
+                            <label for="confirmAdminPIN" class="block mb-1 text-sm font-medium">Confirm New PIN</label>
+                            <input 
+                                type="text" 
+                                id="confirmAdminPIN" 
+                                class="form-control w-full p-2.5 rounded-lg" 
+                                placeholder="Confirm 6-digit PIN"
+                                maxlength="6"
+                                inputmode="numeric"
+                            >
+                        </div>
+                        <button id="changeAdminPINBtn" class="btn btn-primary w-full md:w-auto text-white font-bold py-2.5 px-5 rounded-lg shadow-md">
+                            Change Admin PIN
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold mb-3">Change Bulk Generator PIN</h3>
+                    <p class="text-sm text-gray-400 mb-3">Current PIN: <span id="currentBulkPIN" class="font-mono">••••••</span></p>
+                    <div class="space-y-3">
+                        <div>
+                            <label for="newBulkPIN" class="block mb-1 text-sm font-medium">New 6-digit Bulk Generator PIN</label>
+                            <input 
+                                type="text" 
+                                id="newBulkPIN" 
+                                class="form-control w-full p-2.5 rounded-lg" 
+                                placeholder="Enter new 6-digit PIN"
+                                maxlength="6"
+                                inputmode="numeric"
+                            >
+                        </div>
+                        <div>
+                            <label for="confirmBulkPIN" class="block mb-1 text-sm font-medium">Confirm New PIN</label>
+                            <input 
+                                type="text" 
+                                id="confirmBulkPIN" 
+                                class="form-control w-full p-2.5 rounded-lg" 
+                                placeholder="Confirm 6-digit PIN"
+                                maxlength="6"
+                                inputmode="numeric"
+                            >
+                        </div>
+                        <button id="changeBulkPINBtn" class="btn btn-primary w-full md:w-auto text-white font-bold py-2.5 px-5 rounded-lg shadow-md">
+                            Change Bulk PIN
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bg-yellow-900 bg-opacity-20 border border-yellow-800 rounded-lg p-4">
+                    <h4 class="font-bold text-yellow-500 mb-2"><i class="fas fa-exclamation-triangle mr-2"></i> Important Security Notes</h4>
+                    <ul class="text-sm space-y-1">
+                        <li>• PINs are stored securely in the database</li>
+                        <li>• Use only 6-digit numeric PINs</li>
+                        <li>• Don't use easily guessable PINs like 123456</li>
+                        <li>• Change PINs regularly for security</li>
+                        <li>• Never share PINs with unauthorized users</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration - Using your original config
+        const firebaseConfig = {
+    apiKey: "AIzaSyCVwkF3Ph0PtuclrqT8GQE-0oZdnJFB0wE",
+    authDomain: "app-review-world-63b34.firebaseapp.com",
+    projectId: "app-review-world-63b34",
+    storageBucket: "app-review-world-63b34.firebasestorage.app",
+    messagingSenderId: "663409029724",
+    appId: "1:663409029724:web:ad6a1d03bce613374f6c99"
+  };
+
+function isValidComment(text) {
+  if (!text) return false;
+  if (typeof text !== "string") return false;
+
+  const blocked = [
+    "error #error!syntax!!",
+    "#error!syntax!!",
+    "error",
+    "undefined"
+  ];
+
+  return !blocked.some(word =>
+    text.toLowerCase().includes(word)
+  );
+}
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Main App Class - Keeping your original structure
+        class ReviewsWorldApp {
+            constructor() {
+                this.state = {
+                    isAdminView: false,
+                    currentApps: [],
+                    allComments: {},
+                    cooldownInterval: null,
+                    currentAppName: '',
+                    db: db,
+                    notifications: [],
+                    unreadNotifications: 0,
+                    
+                    
+                    // currentAdminPage: null,
+                    // NEW: For time-based theme
+                    autoThemeEnabled: true,
+                    userOverrideTheme: null,
+                    // NEW: For tracking total comments per app
+                    appTotalComments: {},
+                    // NEW: Security settings loaded from database
+                    securitySettings: {
+                        adminPIN: '997350',
+                        bulkPIN: '997348',
+                        requireAdminLogin: true,
+                        enableNotifications: true
+                    }
+                };
+                this.initialized = false;
+                this.adminPages = {
+                    appManagement: 'adminAppManagementPage',
+                    commentManagement: 'adminCommentManagementPage',
+                    notificationManagement: 'adminNotificationManagementPage',
+                    systemSettings: 'adminSystemSettingsPage',
+                    // NEW: Security PIN Management page
+                    securityPINManagement: 'adminSecurityPINManagementPage'
+                };
+            }
+
+            async init() {
+                if (this.initialized) return;
+                this.initialized = true;
+                // 🔧 FIX: Initialize state containers
+if (!this.state) this.state = {};
+if (!this.state.listeners) this.state.listeners = {};
+
+                console.log('Initializing App Reviews World App v3.3 (Security & App Lock)...');
+                
+                // Setup event listeners first
+                this.setupEventListeners();
+                
+                // Apply time-based theme first
+                this.applyTimeBasedTheme();
+                
+                // Initialize Firebase and start listening
+                if (this.state.db) {
+                    this.listenForData();
+                } else {
+                    this.showToast('Running in offline mode.', 'warning');
+                    this.showApp(); // Show app if no DB
+                }
+            }
+
+            // NEW: Load security settings from Firebase
+            async loadSecuritySettings() {
+                try {
+                    const doc = await this.state.db.collection('settings').doc('security').get();
+                    if (doc.exists) {
+                        const settings = doc.data();
+                        this.state.securitySettings = {
+                            adminPIN: settings.adminPIN || '997350',
+                            bulkPIN: settings.bulkPIN || '997348',
+                            requireAdminLogin: settings.requireAdminLogin !== false,
+                            enableNotifications: settings.enableNotifications !== false
+                        };
+                        
+                        // Update PIN display in admin panel
+                        const adminPINEl = document.getElementById('currentAdminPIN');
+                        const bulkPINEl = document.getElementById('currentBulkPIN');
+                        if (adminPINEl) adminPINEl.textContent = '••••••';
+                        if (bulkPINEl) bulkPINEl.textContent = '••••••';
+                        
+                        return true;
+                    } else {
+                        // Create default security settings if they don't exist
+                        const defaultSettings = {
+                            adminPIN: '997350',
+                            bulkPIN: '997348',
+                            requireAdminLogin: true,
+                            enableNotifications: true,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        await this.state.db.collection('settings').doc('security').set(defaultSettings);
+                        this.state.securitySettings = defaultSettings;
+                        return true;
+                    }
+                } catch (error) {
+                    console.error("Error loading security settings:", error);
+                    return false;
+                }
+            }
+
+            // NEW: Verify Admin PIN from database
+            async verifyAdminPIN(pin) {
+                try {
+                    await this.loadSecuritySettings();
+                    return pin === this.state.securitySettings.adminPIN;
+                } catch (error) {
+                    console.error("Error verifying admin PIN:", error);
+                    return false;
+                }
+            }
+
+            // NEW: Verify Bulk Generator PIN from database
+            async verifyBulkPIN(pin) {
+                try {
+                    await this.loadSecuritySettings();
+                    return pin === this.state.securitySettings.bulkPIN;
+                } catch (error) {
+                    console.error("Error verifying bulk PIN:", error);
+                    return false;
+                }
+            }
+
+            // NEW: Time-based theme function
+            getTimeBasedTheme() {
+                const hour = new Date().getHours();
+                // Morning (6 AM - 6 PM): Light theme
+                // Night (6 PM - 6 AM): Dark theme
+                return (hour >= 6 && hour < 18) ? 'light' : 'dark';
+            }
+
+            // NEW: Apply time-based theme
+            applyTimeBasedTheme() {
+                if (this.state.userOverrideTheme) {
+                    // User has manually overridden the theme
+                    this.applyTheme(this.state.userOverrideTheme);
+                    return;
+                }
+
+                if (this.state.autoThemeEnabled) {
+                    const timeBasedTheme = this.getTimeBasedTheme();
+                    this.applyTheme(timeBasedTheme);
+                }
+            }
+
+            // UPDATED: Theme methods - now with time-based auto theme
+            applyTheme(theme) {
+                // Remove both classes first
+                document.documentElement.classList.remove('dark', 'light');
+                
+                // Add the appropriate class
+                if (theme === 'light') {
+                    document.documentElement.classList.add('light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                }
+                
+                this.updateUserThemeButton(theme);
+            }
+
+            toggleUserTheme() {
+                const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                // Set user override and disable auto theme
+                this.state.userOverrideTheme = newTheme;
+                this.state.autoThemeEnabled = false;
+                
+                // Save to localStorage
+                localStorage.setItem('userTheme', newTheme);
+                localStorage.setItem('autoTheme', 'false');
+                
+                this.applyTheme(newTheme);
+                this.showToast(`Theme set to ${newTheme} mode (manual)`);
+            }
+
+            resetToAutoTheme() {
+                this.state.userOverrideTheme = null;
+                this.state.autoThemeEnabled = true;
+                localStorage.setItem('autoTheme', 'true');
+                localStorage.removeItem('userTheme');
+                this.applyTimeBasedTheme();
+                this.showToast('Theme set to automatic (time-based)');
+            }
+
+            updateUserThemeButton(theme) {
+                const icon = document.getElementById('themeIcon');
+                const text = document.getElementById('themeText');
+                if(!icon || !text) return;
+                
+                if (this.state.autoThemeEnabled) {
+                    icon.className = 'fas fa-clock';
+                    text.textContent = '🌙 Auto Theme';
+                } else if (theme === 'light') {
+                    text.textContent = '🌙 Light Mode';
+                } else {
+                    icon.className = 'fas fa-moon';
+                    text.textContent = '🌙 Theme Mode';
+                }
+            }
+
+            // NEW: Check and load user preferences
+            loadUserPreferences() {
+                const savedAutoTheme = localStorage.getItem('autoTheme');
+                const savedUserTheme = localStorage.getItem('userTheme');
+                
+                if (savedAutoTheme === 'false' && savedUserTheme) {
+                    this.state.autoThemeEnabled = false;
+                    this.state.userOverrideTheme = savedUserTheme;
+                } else {
+                    this.state.autoThemeEnabled = true;
+                    this.state.userOverrideTheme = null;
+                }
+            }
+
+            // --- NEW: Admin Full Page Navigation ---
+            showAdminFullPage(pageId) {
+                // Hide current admin page if any
+                if (this.state.currentAdminPage) {
+                    document.getElementById(this.state.currentAdminPage).classList.remove('show');
+                }
+                
+                // Show the requested page
+                const pageElement = document.getElementById(this.adminPages[pageId]);
+                if (pageElement) {
+                    pageElement.classList.add('show');
+                    this.state.currentAdminPage = this.adminPages[pageId];
+                    document.body.classList.add('no-scroll');
+                    
+                    // Load security settings when PIN management page is opened
+                    if (pageId === 'securityPINManagement') {
+                        this.loadSecuritySettings();
+                    }
+                }
+            }
+
+            hideAdminFullPage() {
+                if (this.state.currentAdminPage) {
+                    document.getElementById(this.state.currentAdminPage).classList.remove('show');
+                    this.state.currentAdminPage = null;
+                    document.body.classList.remove('no-scroll');
+                }
+            }
+
+            // --- Data Listening methods ---
+            
+            listenForData() {
+                let appsLoaded = false; 
+
+                // Listen for Apps
+                this.state.listeners.apps = this.state.db.collection('apps').onSnapshot(snapshot => {
+                    console.log('Real-time: Apps updated');
+                    this.state.currentApps = [];
+                    snapshot.forEach(doc => { 
+                        this.state.currentApps.push({ id: doc.id, ...doc.data() }); 
+                    });
+                    this.updateAppSelectors();
+                    this.updateAppList();
+                    // 🔥 IMPORTANT: show app after first apps load
+if (!appsLoaded) {
+  appsLoaded = true;
+  this.showApp();
+}
+                    
+                }, err => {
+                    console.error("Error listening to apps: ", err); 
+                    this.showToast('Could not load apps.', 'error');
+                    
+                });
+
+                // Listen for Comments
+                this.state.listeners.comments = this.state.db.collection('comments').onSnapshot(snapshot => {
+                    console.log('Real-time: Comments updated'); 
+                    this.state.allComments = {};
+                    this.state.appTotalComments = {};
+                    snapshot.forEach(doc => { 
+                        const data = doc.data();
+                        this.state.allComments[doc.id] = data.comments || [];
+                        // Store total comments count if available
+                        this.state.appTotalComments[doc.id] = data.totalComments || data.comments?.length || 0;
+                    });
+                    this.updateUserCommentCount(); 
+                    this.updateAdminCommentCount();
+                }, err => console.error("Error listening to comments: ", err));
+
+                // Listen for Notifications
+                this.state.listeners.notifications = this.state.db.collection('notifications')
+                    .where('active', '==', true)
+                    .onSnapshot(snapshot => {
+                        console.log('Real-time: Notifications updated'); 
+                        this.state.notifications = [];
+                        snapshot.forEach(doc => {
+                            this.state.notifications.push({ 
+                                id: doc.id, 
+                                ...doc.data(), 
+                                createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : new Date() 
+                            });
+                        });
+                        this.state.notifications.sort((a, b) => b.createdAt - a.createdAt);
+                        this.updateNotificationBadge(); 
+                        this.updateNotificationPanel(); 
+                        this.updateAdminNotificationList();
+                    }, err => { 
+                        console.error("Error listening to notifications: ", err); 
+                    });
+                
+                // BUG FIX 4: Listen for Security Settings
+                this.state.listeners.securitySettings = this.state.db.collection('settings').doc('security').onSnapshot(doc => {
+                    console.log('Real-time: Security Settings updated');
+                    const settings = doc.exists ? doc.data() : { 
+                        adminPIN: '997350', 
+                        bulkPIN: '997348', 
+                        requireAdminLogin: true, 
+                        enableNotifications: true 
+                    };
+                    this.state.securitySettings = settings;
+                    document.getElementById('requireAdminLoginToggle').checked = settings.requireAdminLogin !== false; // Default to true
+                    document.getElementById('enableNotificationsToggle').checked = settings.enableNotifications !== false; // Default to true
+                }, err => console.error("Error listening to security settings: ", err));
+                
+                
+
+            }
+
+            showApp() {
+                document.getElementById('initializer-message').style.display = 'none';
+                const appContainer = document.getElementById('app-container');
+                if (appContainer.style.display !== 'flex') { 
+                    appContainer.style.display = 'flex'; 
+                    setTimeout(() => {
+                        appContainer.style.opacity = 1;
+                        
+                    }, 50);
+                }
+            }
+
+            setupEventListeners() {
+                console.log("Setting up event listeners...");
+                
+                // Load user preferences first
+                this.loadUserPreferences();
+                
+                // Apply theme on load
+                this.applyTimeBasedTheme();
+
+                // --- Menu Buttons ---
+                document.getElementById('menuBtn')?.addEventListener('click', () => this.showSideMenu());
+                document.getElementById('closeMenuBtn')?.addEventListener('click', () => this.hideSideMenu());
+                document.getElementById('sideMenuOverlay')?.addEventListener('click', () => this.hideSideMenu());
+                
+                // UPDATED: Theme toggle with long press for auto theme
+                const themeBtn = document.getElementById('themeToggleBtn');
+                
+                themeBtn?.addEventListener('click', (e) => { this.toggleUserTheme(); });
+                themeBtn?.addEventListener('contextmenu', (e) => { e.preventDefault(); this.resetToAutoTheme(); });
+
+                // --- Admin access & Logout (in menu) ---
+                document.getElementById('adminAccessBtn')?.addEventListener('click', () => this.handleAdminButtonClick());
+                document.getElementById('logoutBtn')?.addEventListener('click', () => this.handleLogout());
+                
+                // --- App management (Admin View) ---
+                document.getElementById('addAppBtn')?.addEventListener('click', () => this.addApp());
+                
+                // --- App selection ---
+                document.getElementById('appSelector')?.addEventListener('change', (e) => this.updateUserCommentCount());
+                document.getElementById('adminAppSelector')?.addEventListener('change', (e) => this.updateAdminCommentCount());
+                
+                // --- Comment management (Admin View) ---
+                document.getElementById('submitCommentsBtn')?.addEventListener('click', () => this.submitBulkComments());
+                
+                // --- Comment generation (User View) ---
+                document.getElementById('generateBtn')?.addEventListener('click', () => this.generateComments());
+                
+                // --- Footer links ---
+                document.getElementById('channelsLink')?.addEventListener('click', (e) => { e.preventDefault(); this.showChannels(); });
+                document.getElementById('contactLink')?.addEventListener('click', (e) => { e.preventDefault(); this.showContact(); });
+                document.getElementById('howItWorksLink')?.addEventListener('click', (e) => { e.preventDefault(); this.showHowItWorks(); });
+                document.getElementById('whatsNewLink')?.addEventListener('click', (e) => { e.preventDefault(); this.showWhatsNew(); });
+                document.getElementById('termsLink')?.addEventListener('click', (e) => { e.preventDefault(); this.showTerms(); });
+                document.getElementById('privacyLink')?.addEventListener('click', (e) => { e.preventDefault(); this.showPrivacy(); });
+
+                // --- Enter key support ---
+                document.getElementById('newAppName')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') this.addApp(); });
+                
+                // --- Notification, Chat, Side Panel Buttons ---
+                document.getElementById('menuNotificationBtn')?.addEventListener('click', () => { this.hideSideMenu(); this.showNotificationPanel(); });
+                
+                document.getElementById('bulkGeneratorBtn')?.addEventListener('click', () => { this.hideSideMenu(); this.showBulkGeneratorLogin(); });
+                document.getElementById('closeNotificationPanel')?.addEventListener('click', () => this.hideNotificationPanel());
+                document.getElementById('sendNotificationBtn')?.addEventListener('click', () => this.createNotification());
+
+               
+                // BUG FIX 4: Add event listeners for other system setting toggles
+                document.getElementById('requireAdminLoginToggle')?.addEventListener('change', (e) => this.saveSettings('settings', 'security', { requireAdminLogin: e.target.checked }, { merge: true }));
+                document.getElementById('enableNotificationsToggle')?.addEventListener('change', (e) => this.saveSettings('settings', 'security', { enableNotifications: e.target.checked }, { merge: true }));
+
+                
+                // NEW: Security PIN management listeners
+                document.getElementById('changeAdminPINBtn')?.addEventListener('click', () => this.changeAdminPIN());
+                document.getElementById('changeBulkPINBtn')?.addEventListener('click', () => this.changeBulkPIN());
+                
+                // --- Slide-up Panel Listeners ---
+                document.getElementById('slide-up-close')?.addEventListener('click', () => this.hideSlideUp());
+                document.getElementById('slide-up-overlay')?.addEventListener('click', () => this.hideSlideUp());
+
+                // NEW: Check theme every minute for time-based changes
+                setInterval(() => {
+                    if (this.state.autoThemeEnabled) {
+                        this.applyTimeBasedTheme();
+                    }
+                }, 60000);
+
+                // Load security settings on startup
+                this.loadSecuritySettings();
+
+                console.log("Finished setting up event listeners.");
+            }
+
+            // --- Menu methods ---
+            showSideMenu() { 
+                document.getElementById('sideMenuOverlay').classList.add('show'); 
+                document.getElementById('sideMenu').classList.add('show'); 
+                document.body.style.overflow = 'hidden'; 
+            }
+            
+            hideSideMenu() { 
+                document.getElementById('sideMenuOverlay').classList.remove('show'); 
+                document.getElementById('sideMenu').classList.remove('show'); 
+                document.body.style.overflow = 'auto'; 
+            }
+
+            // --- Admin Login methods ---
+            handleAdminButtonClick() {
+                if (this.state.isAdminView) { 
+                    this.handleLogout(); 
+                } else { 
+                    this.hideSideMenu(); 
+                    this.showAdminLogin(); 
+                }
+            }
+
+            // UPDATED: Admin login - now uses PIN from database
+            showAdminLogin() {
+                const otpModalHTML = `
+                    <div class="text-center">
+                        <p class="text-green-400 font-semibold mb-4">ℹ️ Note:
+                            This page is only for admins. Members don’t need to enter here 😊</p>
+                        <div id="otp-inputs" class="flex justify-center gap-2 mb-4">
+                            ${Array(6).fill(0).map(() => '<input type="text" class="otp-input" inputmode="numeric" maxlength="1">').join('')}
+                        </div>
+                        <p id="otp-error" class="text-red-400 text-sm h-4"></p>                     
+                    </div>`;
+                this.showModal('✨Admin Area ✨', otpModalHTML, [
+                    { text: 'Cancel', isPrimary: false, action: () => { this.state.isAdminView = false; this.hideModal(); } },
+                    { text: 'Verify PIN', isPrimary: true, action: async () => {
+                        const inputs = Array.from(document.querySelectorAll('.otp-input'));
+                        const pin = inputs.map(input => input.value).join('');
+                        
+                        // Verify PIN from database
+                        const isValid = await this.verifyAdminPIN(pin);
+                        
+                        if (isValid) { 
+                            const modalContent = document.querySelector('.modal-content');
+                            if (modalContent) modalContent.innerHTML = `
+                                <div class="flex flex-col items-center justify-center space-y-3 py-4">
+                                    <svg class="w-16 h-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <p class="text-lg font-semibold text-green-400">PIN verified</p>
+                                </div>`;
+                            setTimeout(() => {
+                                this.state.isAdminView = true; 
+                                document.getElementById('userView')?.classList.add('hidden');
+                                document.getElementById('adminView')?.classList.remove('hidden');
+                                document.getElementById('adminAccessBtn')?.classList.add('hidden');
+                                document.getElementById('logoutBtn')?.classList.remove('hidden');
+                                this.hideModal();
+                                this.showToast('Admin mode enabled');
+
+                            }, 1000);
+                        } else {
+                            const errorEl = document.getElementById('otp-error');
+                            if (errorEl) errorEl.textContent = 'Incorrect PIN.';
+                            inputs.forEach(input => input.value = '');
+                            if (inputs[0]) inputs[0].focus();
+                        }
+                    }}
+                ]);
+                const inputs = Array.from(document.querySelectorAll('.otp-input'));
+                inputs.forEach((input, index) => {
+                    input.addEventListener('input', () => { if (input.value && index < 5) inputs[index + 1].focus(); });
+                    input.addEventListener('keydown', (e) => { if (e.key === 'Backspace' && index > 0 && !input.value) inputs[index - 1].focus(); });
+                });
+                if (inputs[0]) inputs[0].focus();
+            }
+
+            // --- Logout method ---
+            handleLogout() { 
+                this.state.isAdminView = false; 
+                document.getElementById('userView')?.classList.remove('hidden'); 
+                document.getElementById('adminView')?.classList.add('hidden'); 
+                document.getElementById('adminAccessBtn')?.classList.remove('hidden'); 
+                document.getElementById('logoutBtn')?.classList.add('hidden'); 
+                this.showToast('Admin mode disabled'); 
+                this.hideSideMenu();
+                
+            }
+
+            // --- Notification methods ---
+            showNotificationPanel() { 
+                document.getElementById('notificationPanel')?.classList.add('show'); 
+                document.body.style.overflow = 'hidden'; 
+                this.updateNotificationPanel(); 
+            }
+            
+            hideNotificationPanel() { 
+                document.getElementById('notificationPanel')?.classList.remove('show'); 
+                document.body.style.overflow = 'auto'; 
+                // Mark notifications as read when panel is closed
+                this.markNotificationsAsRead();
+            }
+
+            updateNotificationBadge() {
+                const unreadCount = this.state.notifications.filter(n => !n.read).length;
+                this.state.unreadNotifications = unreadCount;
+                const badge = document.getElementById('notificationBadge');
+                if(!badge) return;
+                if (unreadCount > 0) { 
+                    badge.textContent = unreadCount > 9 ? '9+' : unreadCount; 
+                    badge.classList.remove('hidden'); 
+                } else { 
+                    badge.classList.add('hidden'); 
+                }
+            }
+
+            updateNotificationPanel() {
+                const container = document.getElementById('notificationList');
+                const countElement = document.getElementById('notificationCount');
+                if (!container || !countElement) return;
+
+                const activeNotifications = this.state.notifications.filter(n => n.active);
+                countElement.textContent = `${activeNotifications.length} notification${activeNotifications.length !== 1 ? 's' : ''}`;
+
+                if (activeNotifications.length === 0) {
+                    container.innerHTML = `<div class="text-center text-gray-500 py-8"><i class="fas fa-bell-slash text-4xl mb-4 opacity-50"></i><p>No notifications</p></div>`;
+                    return;
+                }
+                
+                container.innerHTML = activeNotifications.map(notification => `
+                    <div class="notification-item ${!notification.read ? 'unread' : ''}">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-semibold notification-item-title ${notification.important ? 'text-yellow-400' : ''}">
+                                ${this.escapeHTML(notification.title)}
+                                ${notification.important ? ' <i class="fas fa-exclamation-circle text-yellow-400"></i>' : ''}
+                            </h4>
+                            <span class="text-xs notification-item-date">${new Date(notification.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <p class="text-sm notification-item-message mb-2">${this.escapeHTML(notification.message)}</p>
+                    </div>`).join('');
+            }
+
+            markNotificationsAsRead() {
+                // In a real implementation, you would update Firestore here
+                this.state.notifications.forEach(notification => {
+                    notification.read = true;
+                });
+                this.updateNotificationBadge();
+                this.updateNotificationPanel();
+            }
+
+            async createNotification() {
+                const title = document.getElementById('notificationTitle')?.value.trim();
+                const message = document.getElementById('notificationMessage')?.value.trim();
+                const urgent = document.getElementById('notificationUrgent')?.checked;
+
+                if (!title || !message) { 
+                    this.showToast('Please fill all fields', 'error'); 
+                    return; 
+                }
+                
+                const notification = { 
+                    title, 
+                    message, 
+                    important: urgent, 
+                    active: true, 
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(), 
+                    createdBy: 'Admin', 
+                    read: false 
+                };
+
+                try {
+                    if (this.state.db) { 
+                        await this.state.db.collection('notifications').add(notification); 
+                    } 
+                    document.getElementById('notificationTitle').value = ''; 
+                    document.getElementById('notificationMessage').value = ''; 
+                    document.getElementById('notificationUrgent').checked = false;
+                    this.showToast('Notification created successfully');
+                } catch (error) { 
+                    console.error('Error creating notification:', error); 
+                    this.showToast('Failed to create notification', 'error'); 
+                }
+            }
+
+            updateAdminNotificationList() {
+                const container = document.getElementById('recentNotificationsContainer');
+                if (!container) return;
+                
+                const activeNotifications = this.state.notifications.filter(n => n.active);
+
+                if (activeNotifications.length === 0) {
+                    container.innerHTML = `<p class="text-gray-500 p-4 text-center">No active notifications</p>`;
+                    return;
+                }
+                
+                container.innerHTML = activeNotifications.map(notification => `
+                    <div class="p-3 bg-gray-800 rounded-lg flex justify-between items-center gap-3">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold ${notification.important ? 'text-yellow-400' : ''} truncate">${this.escapeHTML(notification.title)}</p>
+                            <p class="text-sm text-gray-400 truncate" title="${this.escapeHTML(notification.message)}">${this.escapeHTML(notification.message)}</p>
+                        </div>
+                        <button onclick="app.deleteNotification('${notification.id}')" class="flex-shrink-0 text-red-400 hover:text-red-300 p-1" aria-label="Delete notification">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>`).join('');
+            }
+
+            async deleteNotification(notificationId) {
+                try {
+                    if (this.state.db) { 
+                        // Set active to false instead of deleting to hide it
+                        await this.state.db.collection('notifications').doc(notificationId).update({ active: false }); 
+                    } 
+                    this.showToast('Notification removed');
+                } catch (error) { 
+                    console.error('Error removing notification:', error); 
+                    this.showToast('Failed to remove notification', 'error'); 
+                }
+            }
+
+            // --- Save Settings method ---
+            async saveSettings(collection, docId, settings, options = {}) {
+                if (this.state.db) {
+                    try {
+                        await this.state.db.collection(collection).doc(docId).set(settings, options);
+                        this.showToast('Settings saved successfully');
+                    } catch (error) {
+                        console.error(`Error saving settings to ${collection}/${docId}:`, error);
+                        this.showToast('Failed to save settings', 'error');
+                    }
+                }
+            }
+
+            // --- Comment Count methods ---
+            updateUserCommentCount() {
+                const appName = document.getElementById('appSelector')?.value; 
+                const countElement = document.getElementById('userCommentCountInfo');
+                if (!countElement) return;
+                if (!appName) { countElement.textContent = ''; return; }
+                const availableCount = this.getCommentCount(appName);
+                const totalCount = this.state.appTotalComments[appName] || availableCount;
+                countElement.textContent = `${availableCount} comments available (${availableCount}/${totalCount})`;
+            }
+            
+            updateAdminCommentCount() {
+                const appName = document.getElementById('adminAppSelector')?.value; 
+                const countElement = document.getElementById('adminCommentCountInfo');
+                const adminContainer = document.getElementById('adminActionContainer');
+                if (!countElement || !adminContainer) return;
+                if (!appName) { countElement.textContent = ''; adminContainer.classList.add('hidden'); return; }
+                const availableCount = this.getCommentCount(appName);
+                const totalCount = this.state.appTotalComments[appName] || availableCount;
+                countElement.textContent = `${availableCount} comments available (${availableCount}/${totalCount})`;
+                adminContainer.classList.remove('hidden');
+                this.loadAdminComments(appName); 
+            }
+            
+            getCommentCount(appName) { return (this.state.allComments[appName] || []).length; }
+
+            // --- App Management methods ---
+            // UPDATED: Now shows locked apps differently
+            updateAppSelectors() {
+                const sortedApps = [...this.state.currentApps].sort((a, b) => a.name.localeCompare(b.name));
+                
+                // User selector - shows locked apps as disabled
+                const userSelector = document.getElementById('appSelector');
+                if (userSelector) {
+                    const oldUserVal = userSelector.value;
+                    
+                    let userOptions = '<option value="">Choose an app</option>';
+                    sortedApps.forEach(app => {
+                        const isLocked = app.isLocked === true;
+                        const escapedName = this.escapeHTML(app.name);
+                        if (isLocked) {
+                            userOptions += `<option value="" disabled class="app-coming-soon">${escapedName} 🔒 </option>`;
+                        } else {
+                            userOptions += `<option value="${escapedName}">${escapedName}</option>`;
+                        }
+                    });
+                    
+                    userSelector.innerHTML = userOptions;
+                    
+                    // Restore previous selection if it's still valid and not locked
+                    if (oldUserVal && sortedApps.some(app => app.name === oldUserVal && !app.isLocked)) {
+                        userSelector.value = oldUserVal;
+                    }
+                }
+                
+                // Admin selector (shows all apps, with lock indicator)
+                const adminSelector = document.getElementById('adminAppSelector');
+                if (adminSelector) {
+                    const oldAdminVal = adminSelector.value;
+                    
+                    if (sortedApps.length === 0) { 
+                        adminSelector.innerHTML = '<option value="">No apps available</option>'; 
+                    } else { 
+                        adminSelector.innerHTML = '<option value="">Choose an app</option>' + 
+                            sortedApps.map(app => `<option value="${this.escapeHTML(app.name)}">${this.escapeHTML(app.name)}${app.isLocked ? ' 🔒' : ''}</option>`).join(''); 
+                    }
+                    
+                    if (oldAdminVal && sortedApps.some(app => app.name === oldAdminVal)) {
+                        adminSelector.value = oldAdminVal;
+                    }
+                }
+                
+                // Bulk selector - also shows locked apps as disabled
+                const bulkSelector = document.getElementById('bulkAppSelector');
+                if (bulkSelector) {
+                    let bulkOptions = '<option value="">Choose an app</option>';
+                    sortedApps.forEach(app => {
+                        const isLocked = app.isLocked === true;
+                        const escapedName = this.escapeHTML(app.name);
+                        if (isLocked) {
+                            bulkOptions += `<option value="" disabled class="app-coming-soon">${escapedName} 🔒</option>`;
+                        } else {
+                            bulkOptions += `<option value="${escapedName}">${escapedName}</option>`;
+                        }
+                    });
+                    bulkSelector.innerHTML = bulkOptions;
+                }
+            }
+
+            // UPDATED: Now includes lock/unlock buttons
+            updateAppList() {
+                const container = document.getElementById('appListContainer');
+                if (!container) return;
+                const sortedApps = [...this.state.currentApps].sort((a, b) => a.name.localeCompare(b.name));
+                if (sortedApps.length === 0) { 
+                    container.innerHTML = '<p class="text-gray-500 text-sm p-2 text-center">No apps added yet.</p>'; 
+                    return; 
+                }
+                container.innerHTML = sortedApps.map(app => `
+                    <div class="flex justify-between items-center p-3 rounded-lg hover:bg-gray-700 transition-colors">
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium">${this.escapeHTML(app.name)}</span>
+                            ${app.isLocked ? '<span class="app-locked-badge">LOCKED</span>' : ''}
+                        </div>
+                        <div class="flex gap-2">
+                            <button data-action="toggle-lock" data-appid="${app.id}" data-appname="${this.escapeHTML(app.name)}" data-islocked="${app.isLocked || false}" class="${app.isLocked ? 'text-green-400 hover:text-green-300' : 'text-yellow-400 hover:text-yellow-300'} p-1" aria-label="${app.isLocked ? 'Unlock' : 'Lock'} ${this.escapeHTML(app.name)}">
+                                <i class="fas ${app.isLocked ? 'fa-unlock' : 'fa-lock'}"></i>
+                            </button>
+                            <button data-action="edit" data-appid="${app.id}" data-appname="${this.escapeHTML(app.name)}" class="text-blue-400 hover:text-blue-300 p-1" aria-label="Edit ${this.escapeHTML(app.name)}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                            </button>
+                            <button data-action="delete" data-appid="${app.id}" data-appname="${this.escapeHTML(app.name)}" class="text-red-400 hover:text-red-300 p-1" aria-label="Delete ${this.escapeHTML(app.name)}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                            </button>
+                        </div>
+                    </div>`).join('');
+                container.onclick = (e) => {
+                    const button = e.target.closest('button'); if (!button) return;
+                    const { action, appid, appname, islocked } = button.dataset;
+                    if (action === 'edit') this.editApp(appid, appname);
+                    if (action === 'delete') this.deleteApp(appid, appname);
+                    if (action === 'toggle-lock') this.toggleAppLock(appid, appname, islocked === 'true');
+                };
+            }
+
+            // NEW: Toggle app lock status
+            async toggleAppLock(appId, appName, currentLockStatus) {
+                const newLockStatus = !currentLockStatus;
+                
+                this.showModal(`${newLockStatus ? 'Lock' : 'Unlock'} App?`, 
+                    `Are you sure you want to ${newLockStatus ? 'lock' : 'unlock'} "${appName}"?<br><br>
+                    ${newLockStatus ? 
+                        'Locked apps will be shown as "Coming Soon" to users and cannot be selected.' : 
+                        'Unlocked apps will be available for users to select and generate comments from.'
+                    }`, 
+                [
+                    { text: 'Cancel', isPrimary: false, action: () => this.hideModal() },
+                    { text: newLockStatus ? 'Lock App' : 'Unlock App', isPrimary: true, action: async () => {
+                        try {
+                            if (this.state.db) {
+                                await this.state.db.collection('apps').doc(appId).update({
+                                    isLocked: newLockStatus,
+                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                            }
+                            this.hideModal(); 
+                            this.showToast(`App ${newLockStatus ? 'locked' : 'unlocked'} successfully`);
+                        } catch (error) { 
+                            console.error('Error toggling app lock:', error); 
+                            this.showToast('Failed to update app lock status', 'error'); 
+                        }
+                    }}
+                ]);
+            }
+
+            async addApp() {
+                const input = document.getElementById('newAppName');
+                if (!input) return;
+                const name = input.value.trim();
+                if (!name) { this.showToast('App name cannot be empty', 'error'); return; }
+                if (this.state.currentApps.some(app => app.name.toLowerCase() === name.toLowerCase())) { this.showToast('App name already exists', 'error'); return; }
+                try {
+                    if (this.state.db) {
+                        const docRef = await this.state.db.collection('apps').add({ 
+                            name: name,
+                            isLocked: false, // Default to unlocked
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        await this.state.db.collection('comments').doc(name).set({ 
+                            comments: [], 
+                            totalComments: 0 
+                        });
+                    }
+                    input.value = ''; 
+                    this.showToast('App added successfully');
+                } catch (error) { 
+                    console.error('Error adding app:', error); 
+                    this.showToast('Failed to add app', 'error'); 
+                }
+            }
+
+            async deleteApp(appId, appName) {
+                this.showModal('Delete App?', `Are you sure you want to delete "${appName}" and all its comments? This cannot be undone.`, [
+                    { text: 'Cancel', isPrimary: false, action: () => this.hideModal() },
+                    { text: 'Delete', isPrimary: true, action: async () => {
+                        try {
+                            if (this.state.db) {
+                                await this.state.db.collection('apps').doc(appId).delete();
+                                await this.state.db.collection('comments').doc(appName).delete();
+                            }
+                            this.hideModal(); 
+                            this.showToast('App deleted successfully');
+                        } catch (error) { 
+                            console.error('Error deleting app:', error); 
+                            this.showToast('Failed to delete app', 'error'); 
+                        }
+                    }}
+                ]);
+            }
+
+            editApp(appId, oldName) {
+                this.showModal('Edit App Name', `
+                    <div><label class="block mb-2 text-sm font-medium">New App Name</label>
+                    <input type="text" id="editAppNameInput" class="form-control w-full p-2.5 rounded-lg" value="${this.escapeHTML(oldName)}" placeholder="Enter new app name"></div>`, [
+                    { text: 'Cancel', isPrimary: false, action: () => this.hideModal() },
+                    { text: 'Save', isPrimary: true, action: async () => {
+                        const newName = document.getElementById('editAppNameInput').value.trim();
+                        if (!newName) return this.showToast('App name cannot be empty', 'error');
+                        if (newName === oldName) return this.hideModal();
+                        if (this.state.currentApps.some(app => app.id !== appId && app.name.toLowerCase() === newName.toLowerCase())) { return this.showToast('App name already exists', 'error'); }
+                        try {
+                            if (this.state.db) {
+                                const batch = this.state.db.batch();
+                                const appRef = this.state.db.collection('apps').doc(appId);
+                                batch.update(appRef, { name: newName });
+                                const oldCommentsRef = this.state.db.collection('comments').doc(oldName);
+                                const newCommentsRef = this.state.db.collection('comments').doc(newName);
+                                const comments = this.state.allComments[oldName] || [];
+                                const totalComments = this.state.appTotalComments[oldName] || comments.length;
+                                batch.set(newCommentsRef, { comments: comments, totalComments: totalComments });
+                                batch.delete(oldCommentsRef);
+                                await batch.commit();
+                            }
+                            this.hideModal(); 
+                            this.showToast('App name updated successfully');
+                        } catch (error) { 
+                            console.error('Error updating app:', error); 
+                            this.showToast('Failed to update app', 'error'); 
+                        }
+                    }}
+                ]);
+                setTimeout(() => document.getElementById('editAppNameInput')?.focus(), 100);
+            }
+
+            loadAdminComments(appName) {
+                const container = document.getElementById('manageCommentsContainer');
+                if (!container) return;
+                const comments = this.state.allComments[appName] || [];
+                if (comments.length === 0) { 
+                    container.innerHTML = '<p class="text-gray-500 p-4 text-center">No comments to manage.</p>'; 
+                    return; 
+                }
+                container.innerHTML = comments.map((comment, index) => `
+                    <div class="flex justify-between items-start gap-3 p-3 rounded-lg hover:bg-gray-700 transition-colors">
+                        <div class="flex-1 text-sm">${this.escapeHTML(comment)}</div>
+                        <button data-action="delete-comment" data-appname="${this.escapeHTML(appName)}" data-index="${index}" class="text-red-400 hover:text-red-300 p-1" aria-label="Delete comment">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                        </button>
+                    </div>`).join('');
+                container.onclick = (e) => {
+                    const button = e.target.closest('button');
+                    if (!button || button.dataset.action !== 'delete-comment') return;
+                    const { appname, index } = button.dataset;
+                    this.deleteComment(appname, parseInt(index));
+                }
+            }
+
+            async deleteComment(appName, index) {
+                this.showModal('Delete Comment?', 'Are you sure you want to delete this comment?', [
+                     { text: 'Cancel', isPrimary: false, action: () => this.hideModal() },
+                     { text: 'Delete', isPrimary: true, action: async () => {
+                        if (this.state.allComments[appName]) {
+                            try {
+                                const updatedComments = [...this.state.allComments[appName]];
+                                updatedComments.splice(index, 1); 
+                                if (this.state.db) {
+                                    await this.state.db.collection('comments').doc(appName).update({ comments: updatedComments });
+                                }
+                                this.hideModal(); 
+                                this.showToast('Comment deleted successfully');
+                            } catch (error) { 
+                                console.error('Error deleting comment:', error); 
+                                this.showToast('Failed to delete comment', 'error'); 
+                            }
+                        }
+                    }}
+                ]);
+            }
+
+            async submitBulkComments() {
+                const appName = document.getElementById('adminAppSelector').value;
+                if (!appName) { this.showToast('Please select an app first', 'error'); return; }
+                const textarea = document.getElementById('bulkComments');
+                if (!textarea) return;
+                const newComments = textarea.value.split('\n').map(c => c.trim()).filter(Boolean);
+                if (newComments.length === 0) { this.showToast('Please enter some comments', 'error'); return; }
+                try {
+                    const existingComments = this.state.allComments[appName] || [];
+                    const updatedComments = [...existingComments, ...newComments];
+                    const currentTotal = this.state.appTotalComments[appName] || existingComments.length;
+                    const newTotal = currentTotal + newComments.length;
+                    
+                    if (this.state.db) {
+                        await this.state.db.collection('comments').doc(appName).set({ 
+                            comments: updatedComments,
+                            totalComments: newTotal 
+                        }, { merge: true });
+                    }
+                    textarea.value = ''; 
+                    this.showToast(`${newComments.length} comments added successfully`);
+                } catch (error) { 
+                    console.error('Error adding comments:', error); 
+                    this.showToast('Failed to add comments', 'error'); 
+                }
+            }
+
+            // --- Comment Generation & Copying methods ---
+            async generateComments() {
+                const appName = document.getElementById('appSelector').value;
+                if (!appName) { this.showToast('Please select an app first', 'error'); return; }
+                
+                // Check if app is locked
+                const selectedApp = this.state.currentApps.find(app => app.name === appName);
+                if (selectedApp && selectedApp.isLocked) {
+                    this.showToast('This app is currently locked and unavailable', 'error');
+                    return;
+                }
+                
+                const count = 1; // Fixed to 1 for single user
+                const generateBtn = document.getElementById('generateBtn');
+                if (!generateBtn) return;
+                generateBtn.disabled = true;
+                generateBtn.innerHTML = `<span class="btn-spinner inline-block w-4 h-4 border-2 rounded-full"></span>&nbsp; Fetching...`;
+                if (!this.state.db) {
+                    this.showToast('Database connection error. Cannot generate comments.', 'error');
+                    generateBtn.disabled = false; generateBtn.textContent = 'Generate'; return;
+                }
+                try {
+                    const docRef = this.state.db.collection('comments').doc(appName);
+                    const commentsToShow = await this.state.db.runTransaction(async (transaction) => {
+                        const doc = await transaction.get(docRef);
+                        if (!doc.exists) { throw new Error("App document not found."); }
+                        const allComments = doc.data().comments || [];
+                        const currentTotal = doc.data().totalComments || allComments.length;
+                        if (allComments.length === 0) { return []; }
+                        const shuffled = [...allComments].sort(() => 0.5 - Math.random());
+                        const commentsToServe = shuffled.slice(0, count);
+                        const commentsToRemoveSet = new Set(commentsToServe);
+                        const updatedComments = allComments.filter(comment => !commentsToRemoveSet.has(comment));
+                        
+                        // Update both comments and keep totalComments the same
+                        transaction.update(docRef, { 
+                            comments: updatedComments,
+                            totalComments: currentTotal 
+                        });
+                        return commentsToServe; 
+                    });
+                    this.renderUserComments(commentsToShow, appName);
+                    if (commentsToShow.length === 0) { this.showToast('No more comments available for this app.', 'error'); } 
+                    else { this.showToast(`${commentsToShow.length} comments generated`); }
+                    this.startCooldownTimer(); 
+                } catch (error) {
+                    console.error("Transaction failed: ", error); 
+                    this.showToast('Error generating comments. Could be busy, please try again.', 'error');
+                    generateBtn.disabled = false; generateBtn.textContent = 'Generate';
+                }
+            }
+
+            renderUserComments(comments, appName) {
+                this.state.currentAppName = appName; 
+                const container = document.getElementById('commentsContainer');
+                const copyAllContainer = document.getElementById('copyAllContainer');
+                if (!container || !copyAllContainer) return;
+                if (comments.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center p-4">No comments generated.</p>';
+                    copyAllContainer.innerHTML = ''; return;
+                }
+                container.innerHTML = comments.map(comment => `
+                    <div class="app-card rounded-xl p-4 comment-item" data-comment-text="${this.escapeHTML(comment)}">
+                        <div class="flex justify-between items-start gap-4">
+                            <div class="flex-1 text-sm whitespace-pre-wrap">${this.escapeHTML(comment)}</div>
+                            <button class="copy-btn btn bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm">Copy</button>
+                        </div>
+                    </div>`).join('');
+                copyAllContainer.innerHTML = `<button id="copyAllBtn" class="btn w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg">Copy All ${comments.length} Comments</button>`;
+                document.getElementById('copyAllBtn')?.addEventListener('click', () => this.copyAllComments());
+                container.querySelectorAll('.copy-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.copySingleComment(e.target));
+                });
+            }
+
+            copyTextToClipboard(text) {
+                const textArea = document.createElement("textarea");
+                textArea.value = text; textArea.style.position = "fixed"; textArea.style.left = "-9999px";
+                document.body.appendChild(textArea); textArea.focus(); textArea.select();
+                try { document.execCommand('copy'); return true; } 
+                catch (err) { console.error('Fallback: Oops, unable to copy', err); return false; } 
+                finally { document.body.removeChild(textArea); }
+            }
+
+            async copySingleComment(button) {
+                const commentElement = button.closest('.comment-item');
+                if (!commentElement) return;
+                const commentText = commentElement.dataset.commentText;
+                if (this.copyTextToClipboard(commentText)) {
+                    button.textContent = 'Copied!'; button.disabled = true;
+                    button.classList.replace('bg-green-600', 'bg-gray-600');
+                    commentElement.classList.add('fade-out');
+                    setTimeout(() => {
+                        commentElement.remove();
+                        const remaining = document.querySelectorAll('#commentsContainer .comment-item').length;
+                        const copyAllBtn = document.getElementById('copyAllBtn');
+                        if (remaining === 0) { const c = document.getElementById('copyAllContainer'); if (c) c.innerHTML = ''; } 
+                        else if (copyAllBtn) { copyAllBtn.textContent = `Copy All ${remaining} Comments`; }
+                    }, 300); 
+                    this.showToast('Comment copied');
+                } else { this.showToast('Failed to copy', 'error'); }
+            }
+
+            async copyAllComments() {
+                const elements = document.querySelectorAll('#commentsContainer .comment-item');
+                if (elements.length === 0) return;
+                const allText = Array.from(elements).map(el => el.dataset.commentText).join('\n\n');
+                if (this.copyTextToClipboard(allText)) {
+                    elements.forEach(el => { el.classList.add('fade-out'); });
+                    setTimeout(() => {
+                        const c1 = document.getElementById('commentsContainer'); if (c1) c1.innerHTML = '';
+                        const c2 = document.getElementById('copyAllContainer'); if (c2) c2.innerHTML = '';
+                    }, 300); 
+                    this.showToast(`All ${elements.length} comments copied`);
+                } else { this.showToast('Failed to copy all', 'error'); }
+            }
+
+            startCooldownTimer() {
+                if (this.state.cooldownInterval) clearInterval(this.state.cooldownInterval);
+                const generateBtn = document.getElementById('generateBtn');
+                if (!generateBtn) return;
+                generateBtn.disabled = true;
+                let remaining = 30;
+                generateBtn.innerHTML = `Wait 0:${remaining.toString().padStart(2, '0')}`; 
+                this.state.cooldownInterval = setInterval(() => {
+                    remaining--;
+                     const currentBtn = document.getElementById('generateBtn');
+                     if (!currentBtn) { clearInterval(this.state.cooldownInterval); return; }
+                    currentBtn.innerHTML = `Wait 0:${remaining.toString().padStart(2, '0')}`;
+                    if (remaining <= 0) {
+                        clearInterval(this.state.cooldownInterval);
+                        currentBtn.disabled = false; currentBtn.innerHTML = 'Generate';
+                    }
+                }, 1000);
+            }
+
+           
+
+            // NEW: Security PIN Management Functions
+            async changeAdminPIN() {
+                const newPIN = document.getElementById('newAdminPIN').value.trim();
+                const confirmPIN = document.getElementById('confirmAdminPIN').value.trim();
+                
+                if (!newPIN || !confirmPIN) {
+                    return this.showToast('Please fill both PIN fields', 'error');
+                }
+                
+                if (newPIN.length !== 6 || !/^\d+$/.test(newPIN)) {
+                    return this.showToast('PIN must be exactly 6 digits', 'error');
+                }
+                
+                if (newPIN !== confirmPIN) {
+                    return this.showToast('PINs do not match', 'error');
+                }
+                
+                try {
+                    await this.saveSettings('settings', 'security', { 
+                        adminPIN: newPIN 
+                    }, { merge: true });
+                    
+                    document.getElementById('newAdminPIN').value = '';
+                    document.getElementById('confirmAdminPIN').value = '';
+                    this.showToast('Admin PIN changed successfully');
+                    
+                    // Reload security settings
+                    await this.loadSecuritySettings();
+                } catch (error) {
+                    console.error('Error changing admin PIN:', error);
+                    this.showToast('Failed to change admin PIN', 'error');
+                }
+            }
+
+            async changeBulkPIN() {
+                const newPIN = document.getElementById('newBulkPIN').value.trim();
+                const confirmPIN = document.getElementById('confirmBulkPIN').value.trim();
+                
+                if (!newPIN || !confirmPIN) {
+                    return this.showToast('Please fill both PIN fields', 'error');
+                }
+                
+                if (newPIN.length !== 6 || !/^\d+$/.test(newPIN)) {
+                    return this.showToast('PIN must be exactly 6 digits', 'error');
+                }
+                
+                if (newPIN !== confirmPIN) {
+                    return this.showToast('PINs do not match', 'error');
+                }
+                
+                try {
+                    await this.saveSettings('settings', 'security', { 
+                        bulkPIN: newPIN 
+                    }, { merge: true });
+                    
+                    document.getElementById('newBulkPIN').value = '';
+                    document.getElementById('confirmBulkPIN').value = '';
+                    this.showToast('Bulk Generator PIN changed successfully');
+                    
+                    // Reload security settings
+                    await this.loadSecuritySettings();
+                } catch (error) {
+                    console.error('Error changing bulk PIN:', error);
+                    this.showToast('Failed to change bulk PIN', 'error');
+                }
+            }
+
+            // UPDATED: Bulk Generator Methods - now uses PIN from database
+            showBulkGeneratorLogin() {
+                const bulkModalHTML = `
+                    <div class="text-center">
+                        <p class="text-green-400 font-semibold mb-4">Enter PIN to access Bulk Comments Tool</p>
+                        <div id="bulk-otp-inputs" class="flex justify-center gap-2 mb-4">
+                            ${Array(6).fill(0).map(() => '<input type="text" class="otp-input" inputmode="numeric" maxlength="1">').join('')}
+                        </div>
+                        <p id="bulk-otp-error" class="text-red-400 text-sm h-4"></p>                     
+                    </div>`;
+                
+                this.showModal('✨Bulk Comments Tool ✨', bulkModalHTML, [
+                    { text: 'Cancel', isPrimary: false, action: () => { this.hideModal(); } },
+                    { text: 'Verify PIN', isPrimary: true, action: async () => {
+                        const inputs = Array.from(document.querySelectorAll('#bulk-otp-inputs .otp-input'));
+                        const pin = inputs.map(input => input.value).join('');
+                        
+                        // Verify PIN from database
+                        const isValid = await this.verifyBulkPIN(pin);
+                        
+                        if (isValid) { 
+                            this.hideModal();
+                            this.openBulkGenerator();
+                        } else {
+                            const errorEl = document.getElementById('bulk-otp-error');
+                            if (errorEl) errorEl.textContent = 'Incorrect PIN.';
+                            inputs.forEach(input => input.value = '');
+                            if (inputs[0]) inputs[0].focus();
+                        }
+                    }}
+                ]);
+                
+                const inputs = Array.from(document.querySelectorAll('#bulk-otp-inputs .otp-input'));
+                inputs.forEach((input, index) => {
+                    input.addEventListener('input', () => { 
+                        if (input.value && index < 5) inputs[index + 1].focus(); 
+                    });
+                    input.addEventListener('keydown', (e) => { 
+                        if (e.key === 'Backspace' && index > 0 && !input.value) inputs[index - 1].focus(); 
+                    });
+                });
+                if (inputs[0]) inputs[0].focus();
+            }
+
+            openBulkGenerator() {
+                // Create bulk generator modal
+                const bulkModalHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="bulkAppSelector" class="block mb-2 text-sm font-medium">App Name</label>
+                            <select id="bulkAppSelector" class="form-control w-full p-2.5 rounded-lg" aria-required="true">
+                                <option value="">Loading apps...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="bulkCommentCount" class="block mb-2 text-sm font-medium">Number of Comments</label>
+                            <input 
+                                type="number" 
+                                id="bulkCommentCount" 
+                                placeholder="Enter any number" 
+                                min="1" 
+                                class="form-control w-full p-2.5 rounded-lg"
+                                aria-required="true"
+                                value="10"
+                            >
+                            <p class="text-xs text-gray-400 mt-1">♾️ Create as many comments as you want
+                           ⚡️ Fast • Simple • No limits</p>
+                        </div>
+                        <div id="bulkCommentCountInfo" class="text-right text-sm text-gray-400 h-5 pt-1" aria-live="polite"></div>
+                    </div>`;
+                
+                this.showModal('✨Bulk Comments Tool ✨', bulkModalHTML, [
+                    { text: 'Cancel', isPrimary: false, action: () => this.hideModal() },
+                    { text: 'Generate', isPrimary: true, action: () => this.generateBulkComments() }
+                ]);
+                
+                // Populate app selector
+                this.updateBulkAppSelector();
+            }
+
+            updateBulkAppSelector() {
+                const bulkSelector = document.getElementById('bulkAppSelector');
+                if (!bulkSelector) return;
+                
+                const sortedApps = [...this.state.currentApps].sort((a, b) => a.name.localeCompare(b.name));
+                let options = '<option value="">Choose an app</option>';
+                sortedApps.forEach(app => {
+                    const isLocked = app.isLocked === true;
+                    const escapedName = this.escapeHTML(app.name);
+                    if (isLocked) {
+                        options += `<option value="" disabled class="app-coming-soon">${escapedName} 🔒</option>`;
+                    } else {
+                        options += `<option value="${escapedName}">${escapedName}</option>`;
+                    }
+                });
+                
+                bulkSelector.innerHTML = options;
+                
+                // Add change listener for comment count info
+                bulkSelector.addEventListener('change', () => this.updateBulkCommentCount());
+            }
+
+            updateBulkCommentCount() {
+                const appName = document.getElementById('bulkAppSelector')?.value; 
+                const countElement = document.getElementById('bulkCommentCountInfo');
+                if (!countElement) return;
+                if (!appName) { countElement.textContent = ''; return; }
+                const availableCount = this.getCommentCount(appName);
+                const totalCount = this.state.appTotalComments[appName] || availableCount;
+                countElement.textContent = `${availableCount} comments available (${availableCount}/${totalCount})`;
+            }
+
+            async generateBulkComments() {
+                const appName = document.getElementById('bulkAppSelector').value;
+                if (!appName) { this.showToast('Please select an app first', 'error'); return; }
+                
+                // Check if app is locked
+                const selectedApp = this.state.currentApps.find(app => app.name === appName);
+                if (selectedApp && selectedApp.isLocked) {
+                    this.showToast('This app is currently locked and unavailable', 'error');
+                    return;
+                }
+                
+                const countInput = document.getElementById('bulkCommentCount');
+                const count = parseInt(countInput.value);
+                
+                if (isNaN(count) || count < 1) { 
+                    this.showToast('Please enter a valid number of comments', 'error'); 
+                    return; 
+                }
+                
+                // Show loading state
+                const modalContent = document.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.innerHTML = `
+                        <div class="text-center py-4">
+                            <div class="btn-spinner inline-block w-8 h-8 border-4 rounded-full mb-4"></div>
+                            <p>Generating ${count} comments...</p>
+                        </div>`;
+                }
+                
+                if (!this.state.db) {
+                    this.showToast('Database connection error. Cannot generate comments.', 'error');
+                    this.hideModal();
+                    return;
+                }
+                
+                try {
+                    const docRef = this.state.db.collection('comments').doc(appName);
+                    const commentsToShow = await this.state.db.runTransaction(async (transaction) => {
+                        const doc = await transaction.get(docRef);
+                        if (!doc.exists) { throw new Error("App document not found."); }
+                        const allComments = doc.data().comments || [];
+                        const currentTotal = doc.data().totalComments || allComments.length;
+                        if (allComments.length === 0) { return []; }
+                        
+                        // For bulk generator, take as many as requested (up to available)
+                        const commentsToServe = allComments.slice(0, count);
+                        const updatedComments = allComments.slice(commentsToServe.length);
+                        
+                        transaction.update(docRef, { 
+                            comments: updatedComments,
+                            totalComments: currentTotal 
+                        });
+
+                        return commentsToServe; 
+                    });
+                    
+                    this.hideModal();
+                    this.renderUserComments(commentsToShow, appName);
+                    
+                    if (commentsToShow.length === 0) { 
+                        this.showToast('No more comments available for this app.', 'error'); 
+                    } else if (commentsToShow.length < count) { 
+                        this.showToast(`Only ${commentsToShow.length} comments were available`, 'warning'); 
+                    } else { 
+                        this.showToast(`${commentsToShow.length} bulk comments generated`); 
+                    }
+                    
+                } catch (error) {
+                    console.error("Transaction failed: ", error); 
+                    this.showToast('Error generating bulk comments. Please try again.', 'error');
+                    this.hideModal();
+                }
+            }
+            
+            // --- UI Helper methods ---
+            showModal(title, content, buttons = []) {
+                document.getElementById('modalContainer').innerHTML = `
+                    <div class="modal-overlay">
+                        <div class="modal-content">
+                            <h3 class="text-xl font-bold mb-4 text-center">${title}</h3>
+                            <div class="mb-6 text-sm">${content}</div>
+                            <div class="flex gap-3 justify-end">
+                                ${buttons.map(btn => `<button class="btn px-4 py-2 rounded-lg ${btn.isPrimary ? 'btn-primary' : 'border border-gray-600 hover:bg-gray-700 text-gray-900 dark:text-white'}">${btn.text}</button>`).join('')}                        </div>
+                        </div>
+                    </div>`;
+                document.querySelectorAll('#modalContainer .btn').forEach((button, index) => button.onclick = buttons[index].action);
+            }
+
+            hideModal() { document.getElementById('modalContainer').innerHTML = ''; }
+
+            showSlideUp(title, content) {
+                document.getElementById('slide-up-title').textContent = title;
+                document.getElementById('slide-up-content').innerHTML = content;
+                document.getElementById('slide-up-overlay').classList.add('show');
+                document.getElementById('slide-up-panel').classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+
+            hideSlideUp() {
+                document.getElementById('slide-up-overlay').classList.remove('show');
+                document.getElementById('slide-up-panel').classList.remove('show');
+                document.body.style.overflow = 'auto';
+            }
+
+            // Footer link content
+            // BUG FIX 5: Updated channels with real links
+            showChannels() { 
+                this.showSlideUp('Our Channels', `
+                    <div class="space-y-4">
+                        <p>Stay connected with us through our official channels:</p>
+                        
+                        
+                        <div class="bg-blue-800 bg-opacity-20 border border-blue-700 rounded-lg p-4">
+                            <h4 class="font-bold text-blue-500 mb-2"><i class="fab fa-telegram mr-2"></i>App Reviews World Telegram</h4>
+                            <p class="text-sm mb-2">Follow us for news and announcements.</p>
+                            <a href="https://t.me/+HgyzMGsIwHxkODY9" target="_blank" class="text-blue-500 hover:text-blue-500 underline">Join Telegram Channel</a>
+                        </div>
+                        
+                    </div>
+                `); 
+            }
+            
+            // BUG FIX 6: Updated contact info with real links
+            showContact() { 
+                this.showSlideUp('Contact Us', `
+                    <div class="space-y-4">
+                        <p>We'd love to hear from you! Here's how you can reach us:</p>
+                        
+                        <div class="bg-blue-900 bg-opacity-20 border border-blue-800 rounded-lg p-4">
+                            <h4 class="font-bold text-blue-500 mb-2"><i class="fab fa-whatsapp mr-2"></i> Telegram Support</h4>
+                            <p class="text-sm">Quick support via Telegram</p>
+                            <a href="https://t.me/PrimeRexX001" target="_blank" class="text-blue-500 hover:text-blue-400 underline text-sm">Chat on Telegram</a>
+                        </div>
+                    </div>
+                `); 
+            }
+            
+            showHowItWorks() { 
+                this.showSlideUp('How It Works', `
+                    <div class="space-y-6">
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">1</div>
+                            <div>
+                                <h4 class="font-bold mb-2">Choose Your App</h4>
+                                <p class="text-sm text-gray-400">Select the app for which you want a comment.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">2</div>
+                            <div>
+                                <h4 class="font-bold mb-2">Click Generate</h4>
+                                <p class="text-sm text-gray-400">Our system creates one fresh comment for you.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">3</div>
+                            <div>
+                                <h4 class="font-bold mb-2">Copy & Use</h4>
+                                <p class="text-sm text-gray-400">Copy the comment and use it instantly.</p>
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 rounded-lg p-4 mt-4">
+                            <p class="text-sm"><strong>Note:</strong>If you are taking comments, please post them properly and submit a screenshot as proof.</p>
+                        </div>
+                    </div>
+                `); 
+            }
+            
+            
+            
+            showTerms() { 
+                this.showSlideUp('Terms & Conditions', `
+                    <div class="space-y-4 text-sm">
+                        <p>By using App Reviews World, you agree to the following terms and conditions:</p>
+                        <h4 class="font-bold mt-4">1. User Responsibility</h4>
+                        <p>This platform provides comment-related services for general use only. Users are fully responsible for how and where the comments are posted.</p>                        
+                        <h4 class="font-bold mt-4">2. Comment Generation</h4>
+                        <p>Comments are generated individually. Each generated comment is ment for single use only.</p>
+                         <h4 class="font-bold mt-4">3. Proof Submission</h4>
+                        <p>If comments are taken as part of any task , users must post the comment properly and submit a clear screenshot as proof. </p>
+                        <div class="bg-gray-800 rounded-lg p-4 mt-4">
+                            <p class="text-xs">Last updated: ${new Date().toLocaleDateString()}</p>
+                        </div>
+                    </div>
+                `); 
+            }
+            
+            showPrivacy() { 
+                this.showSlideUp('Privacy Policy', `
+                    <div class="space-y-4 text-sm">
+                        <h4 class="font-bold mt-4">App Reviews World</h4>
+                        <p>Your privacy is important to us. This Privacy Policy explains how App Reviews World handles information on this platform.</p>
+                        <h4 class="font-bold mt-4">Information Collection</h4>
+                        <p>We do not collect any personal information such as name, phone number, or email address. Only basic usage details (like app selection and comment generation count) may be recorded to improve the service.</p>
+                        <h4 class="font-bold mt-4">Use of Information</h4>
+                        <p>Any collected usage data is used only for service improvement and performance monitoring. We do not sell, trade, or misuse user information.</p>
+                        <h4 class="font-bold mt-4">Data Security</h4>
+                        <p>We apply standard security practices to protect our system and prevent unauthorized access.</p>
+                        <h4 class="font-bold mt-4">Third-Party Services</h4>
+                        <p>Trusted third-party tools may be used for hosting or analytics purposes to keep the platform running smoothly.</p>
+                         <h4 class="font-bold mt-4">Policy Updates</h4>
+                         <p>This Privacy Policy may be updated when needed. Continued use of App Reviews World means you agree to the updated policy.</p>
+                        <div class="bg-gray-800 rounded-lg p-4 mt-4">
+                            <p class="text-xs">For questions about our privacy practices, contact us at on Telegram @PrimeRexX001</p>
+                        </div>
+                    </div>
+                `); 
+            }
+
+            // BUG FIX 9: Updated toast to be faster and have a close button
+            showToast(message, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                
+                const messageSpan = document.createElement('span');
+                messageSpan.style.flexGrow = '1';
+                messageSpan.textContent = message;
+                
+                const closeButton = document.createElement('button');
+                closeButton.className = 'toast-close-btn';
+                closeButton.innerHTML = '&times;';
+                
+                const removeToast = () => {
+                    toast.classList.remove('show');
+                    toast.addEventListener('transitionend', () => toast.remove());
+                };
+                
+                closeButton.onclick = removeToast;
+                toast.appendChild(messageSpan);
+                toast.appendChild(closeButton);
+                container.appendChild(toast);
+                
+                setTimeout(() => toast.classList.add('show'), 10);
+                setTimeout(removeToast, 2000); // Disappears after 2 seconds
+            }
+
+            escapeHTML(str) { 
+                if (typeof str !== 'string') return ''; 
+                const p = document.createElement('p'); 
+                p.textContent = str; 
+                return p.innerHTML; 
+            }
+        }
+
+        // Initialize the app
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!window.appInstance) {
+                console.log("DOM content loaded, creating app instance.");
+                window.appInstance = new ReviewsWorldApp();
+                app = window.appInstance; 
+                app.init();
+            }
+        });
+    </script>
+</body>
+</html>
